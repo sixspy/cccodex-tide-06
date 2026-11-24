@@ -239,6 +239,19 @@ th { background: #f6f0e4; color: var(--muted); font-weight: 600; position: stick
 .徽章.警 { background: rgba(196,122,26,0.14); color: var(--amber); }
 .徽章.危 { background: rgba(177,67,67,0.12); color: var(--danger); }
 .徽章.好 { background: rgba(47,122,79,0.12); color: var(--ok); }
+.徽章.次 { background: rgba(92,107,122,0.12); color: var(--muted); }
+
+.匣格 { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 10px; }
+.匣卡 {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(180deg, #fff, #faf5ea);
+  box-shadow: var(--shadow);
+}
+.匣卡 .头 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.匣卡 .线 { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.匣卡 .痕 { margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
 
 .回执 {
   margin: 0;

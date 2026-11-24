@@ -47,6 +47,15 @@
         <pre class="回执" id="规">加载中…</pre>
       </section>
       <section class="卷">
+        <h2>窗键幂等策略</h2>
+        <p class="说明" id="幂等形">读取中…</p>
+        <div class="工具">
+          <button class="按钮" data-形="封印">封印（拒回刷）</button>
+          <button class="按钮 次" data-形="归档">归档（双写两轨）</button>
+        </div>
+        <p class="说明" id="幂等果">切换后：重复灌同号，现行不加行；封印落拒因，归档落归档键。</p>
+      </section>
+      <section class="卷">
         <h2>空桩目录</h2>
         <p class="说明" id="空桩"></p>
         <div class="双栏">
@@ -56,7 +65,21 @@
       </section>
       <script>
       (async () => {
-        document.getElementById("规").textContent = JSON.stringify(await 潮切.getJSON("/api/窗规"), null, 2);
+        async function 刷规() {
+          document.getElementById("规").textContent = JSON.stringify(await 潮切.getJSON("/api/窗规"), null, 2);
+        }
+        async function 刷幂等() {
+          const 概 = await 潮切.getJSON("/api/窗键幂等");
+          document.getElementById("幂等形").textContent = `当前策略：${概.当前形态}｜${概.当前形态说明}`;
+        }
+        await 刷规(); await 刷幂等();
+        for (const b of document.querySelectorAll("[data-形]")) {
+          b.onclick = async () => {
+            await 潮切.postJSON("/api/窗规", { 幂等形态: b.dataset.形 });
+            await 刷规(); await 刷幂等();
+            document.getElementById("幂等果").textContent = `已切到 ${b.dataset.形}。回观测流再灌同号看对账。`;
+          };
+        }
         const s = await 潮切.getJSON("/api/空桩");
         document.getElementById("空桩").textContent = "空桩 " + s.条数 + "：" + (s.空桩 || []).join(" · ");
       })();

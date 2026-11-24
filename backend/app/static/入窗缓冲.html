@@ -43,18 +43,42 @@
       </header>
 
       <section class="卷">
-        <div class="表绕"><table><thead><tr><th>事件编号</th><th>运单键</th><th>窗号</th><th>事件时</th><th>命运</th></tr></thead><tbody id="表"></tbody></table></div>
+        <h2>缓冲详情</h2>
+        <div class="表绕"><table><thead><tr><th>事件编号</th><th>运单键</th><th>窗号</th><th>事件时</th><th>命运</th><th>幂等痕迹</th></tr></thead><tbody id="表"></tbody></table></div>
       </section>
-      <section class="卷"><div class="双栏"><p class="说明">缓冲是关窗前的在途。关窗后命运应变为已物化，条数应下降。</p><div class="侧注">版式：左侧窗时间轴。对拍是顶栏双轨，肉眼应能分开。</div></div></section>
+      <section class="卷">
+        <h2>单号对账（只读）</h2>
+        <div class="工具">
+          <input id="查号" placeholder="输入事件编号" style="padding:8px 10px;border:1px solid var(--line);border-radius:8px"/>
+          <button class="按钮" id="查">查对账</button>
+        </div>
+        <div class="表绕"><table><thead><tr><th>事件编号</th><th>校验</th><th>装载批次</th><th>观测命运</th><th>缓冲命运</th><th>现行行数</th><th>归档行数</th><th>形态</th><th>拒因/归档键</th><th>valid</th></tr></thead><tbody id="对账表"></tbody></table></div>
+      </section>
+      <section class="卷"><div class="双栏"><p class="说明">缓冲是关窗前的在途。关窗后命运应变为已物化，条数应下降。重号被拒不会在缓冲多出第二行。</p><div class="侧注">版式：左侧窗时间轴。对拍是顶栏双轨，肉眼应能分开。</div></div></section>
       <script>
+      async function 渲染对账(rows) {
+        const tb = document.getElementById("对账表"); tb.innerHTML = "";
+        if (!rows.length) { tb.innerHTML = `<tr><td colspan="10">${潮切.空态("无对账数据。")}</td></tr>`; return; }
+        for (const x of rows) {
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(x.事件编号)}</td><td>${潮切.安全文本(x.校验 || "—")}</td><td>${潮切.安全文本(x.装载批次 || "—")}</td><td>${潮切.安全文本(x.观测命运 || "—")}</td><td>${潮切.安全文本(x.缓冲命运 || "—")}</td><td>${x.现行行数}</td><td>${x.归档行数}</td><td>${潮切.形态徽章(x.形态标记)}</td><td>${潮切.安全文本(x.拒因 || x.归档键 || "首灌")}</td><td>${x.valid ? 潮切.徽章("valid","好") : 潮切.徽章("失效","危")}</td>`));
+        }
+      }
       (async () => {
         const rows = await 潮切.getJSON("/api/入窗缓冲");
         const tb = document.getElementById("表");
-        if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("缓冲为空。要么尚未装载，要么已经关窗物化。")}</td></tr>`; return; }
+        const 对账 = await 潮切.幂等对账();
+        const 账图 = Object.fromEntries(对账.map(x => [x.事件编号, x]));
+        if (!rows.length) { tb.innerHTML = `<tr><td colspan="6">${潮切.空态("缓冲为空。要么尚未装载，要么已经关窗物化。")}</td></tr>`; return; }
         for (const r of rows) {
-          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.事件编号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${潮切.安全文本(r.窗号)}</td><td>${潮切.安全文本(r.事件时)}</td><td>${潮切.徽章(r.命运)}</td>`));
+          const 账 = 账图[r.事件编号];
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(r.事件编号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${潮切.安全文本(r.窗号)}</td><td>${潮切.安全文本(r.事件时)}</td><td>${潮切.徽章(r.命运)}</td><td>${账 ? 潮切.幂等摘要(账) : "—"}</td>`));
         }
       })();
+      document.getElementById("查").onclick = async () => {
+        const 号 = document.getElementById("查号").value.trim();
+        await 渲染对账(await 潮切.幂等对账(号 || undefined));
+      };
+      渲染对账([]);
       </script>
 
     </main>

@@ -65,7 +65,23 @@ function 安全文本(s) {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   })[c]);
 }
+function 形态徽章(形态) {
+  if (!形态) return 徽章("无回执", "次");
+  return 形态 === "归档" ? 徽章("归档·双写", "警") : 徽章("封印·拒回刷", "");
+}
+function 幂等摘要(账) {
+  if (!账) return "无幂等回执";
+  const ok = 账.valid ? "valid" : "失效";
+  if (账.形态标记 === "归档") return `归档 · ${账.归档键 || "-"} · ${ok}`;
+  return `封印 · ${账.拒因 || "首灌"} · ${ok}`;
+}
+async function 幂等对账(事件编号) {
+  const q = 事件编号 ? `?事件编号=${encodeURIComponent(事件编号)}` : "";
+  const d = await getJSON("/api/窗键幂等/对账" + q);
+  return d.对账 || [];
+}
 window.潮切 = {
   getJSON, postJSON, 行, 徽章, 空态, 格式概览, 渲染水位,
   窗规一行, 装载摘要, 关窗摘要, 贯验摘要, 安全文本,
+  形态徽章, 幂等摘要, 幂等对账,
 };

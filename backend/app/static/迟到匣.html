@@ -43,16 +43,40 @@
       </header>
 
       <section class="卷">
-        <div class="表绕"><table><thead><tr><th>编号</th><th>事件编号</th><th>运单键</th><th>原因</th><th>事件时</th></tr></thead><tbody id="表"></tbody></table></div>
+        <h2>迟到卡片</h2>
+        <p class="说明" id="形"></p>
+        <div class="匣格" id="格"></div>
       </section>
-      <section class="卷"><div class="双栏"><p class="说明">迟到匣吃出窗事件。空桩「迟到升格回放」可再开，基线只保留旁路。</p><div class="侧注">行业皮：物流网点。拓扑：单流入窗，不是双轨。</div></div></section>
+      <section class="卷">
+        <h2>迟到侧同号对账</h2>
+        <div class="表绕"><table><thead><tr><th>事件编号</th><th>现行行数</th><th>迟到行数</th><th>归档行数</th><th>形态</th><th>拒因/归档键</th></tr></thead><tbody id="对账表"></tbody></table></div>
+      </section>
+      <section class="卷"><div class="双栏"><p class="说明">迟到匣吃出窗事件。空桩「迟到升格回放」可再开，基线只保留旁路。同号再次灌入不会在匣里多一行：封印落拒因，归档把旧行收进只读归档。</p><div class="侧注">行业皮：物流网点。拓扑：单流入窗，不是双轨。</div></div></section>
       <script>
       (async () => {
         const rows = await 潮切.getJSON("/api/迟到匣");
-        const tb = document.getElementById("表");
-        if (!rows.length) { tb.innerHTML = `<tr><td colspan="5">${潮切.空态("迟到匣为空。回潮切台灌迟到样例。")}</td></tr>`; return; }
-        for (const r of rows) {
-          tb.appendChild(潮切.行(`<td>${r.编号}</td><td>${潮切.安全文本(r.事件编号)}</td><td>${潮切.安全文本(r.运单键)}</td><td>${潮切.徽章(r.原因,"警")}</td><td>${潮切.安全文本(r.事件时)}</td>`));
+        const 对账 = await 潮切.幂等对账();
+        const 账图 = Object.fromEntries(对账.map(x => [x.事件编号, x]));
+        const 格 = document.getElementById("格");
+        if (!rows.length) { 格.innerHTML = 潮切.空态("迟到匣为空。回潮切台灌迟到样例。"); }
+        else for (const r of rows) {
+          const 账 = 账图[r.事件编号] || {};
+          const 痕 = 账.形态标记 ? `幂等：${潮切.形态徽章(账.形态标记)} ${潮切.安全文本(账.拒因 || 账.归档键 || "任一新号首灌")}` : "幂等：无回执";
+          const 卡 = document.createElement("div");
+          卡.className = "匣卡";
+          卡.innerHTML = `<div class="头"><b>${潮切.安全文本(r.事件编号)}</b>${潮切.徽章(r.原因,"警")}</div>
+            <div class="线">运单 ${潮切.安全文本(r.运单键)} · 事件时 ${潮切.安全文本(r.事件时)}</div>
+            <div class="线">匣编号 ${r.编号} · 归档 ${账.归档行数 ?? 0} 行 · 现行 ${账.现行行数 ?? 0} 行</div>
+            <div class="痕">${痕}</div>`;
+          格.appendChild(卡);
+        }
+        const 概 = await 潮切.getJSON("/api/窗键幂等");
+        document.getElementById("形").textContent = `当前策略：${概.当前形态说明}`;
+        const tb = document.getElementById("对账表");
+        const 迟 = 对账.filter(x => x.迟到行数 > 0);
+        if (!迟.length) { tb.innerHTML = `<tr><td colspan="6">${潮切.空态("暂无迟到侧回执。")}</td></tr>`; }
+        else for (const x of 迟) {
+          tb.appendChild(潮切.行(`<td>${潮切.安全文本(x.事件编号)}</td><td>${x.现行行数}</td><td>${x.迟到行数}</td><td>${x.归档行数}</td><td>${潮切.形态徽章(x.形态标记)}</td><td>${潮切.安全文本(x.拒因 || x.归档键 || "首灌")}</td>`));
         }
       })();
       </script>

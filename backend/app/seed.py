@@ -65,6 +65,28 @@ CREATE TABLE IF NOT EXISTS 装载批次 (
   迟到 INTEGER NOT NULL DEFAULT 0,
   报告 TEXT NOT NULL DEFAULT '{}'
 );
+CREATE TABLE IF NOT EXISTS 幂等账 (
+  编号 INTEGER PRIMARY KEY AUTOINCREMENT,
+  事件编号 TEXT NOT NULL,
+  形态 TEXT NOT NULL,
+  拒因 TEXT NOT NULL DEFAULT '',
+  归档键 TEXT NOT NULL DEFAULT '',
+  valid INTEGER NOT NULL DEFAULT 1,
+  批次编号 TEXT NOT NULL DEFAULT '',
+  时刻 TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS 幂等账_事件 ON 幂等账(事件编号);
+CREATE TABLE IF NOT EXISTS 幂等归档 (
+  归档键 TEXT PRIMARY KEY,
+  事件编号 TEXT NOT NULL,
+  运单键 TEXT NOT NULL,
+  网点键 TEXT NOT NULL,
+  事件时 TEXT NOT NULL,
+  原命运 TEXT NOT NULL DEFAULT '',
+  来源批次 TEXT NOT NULL DEFAULT '',
+  归档时 TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS 幂等归档_事件 ON 幂等归档(事件编号);
 CREATE TABLE IF NOT EXISTS 关窗批次 (
   编号 TEXT PRIMARY KEY,
   窗号 TEXT NOT NULL,
@@ -90,8 +112,13 @@ def 初始化库() -> None:
             "当前窗号": "W-demo",
             "窗起": "2026-11-24T00:00:00Z",
             "窗止": "2026-11-24T01:00:00Z",
+            "幂等形态": "封印",
         }.items():
             conn.execute("INSERT INTO 窗规(键,值) VALUES (?,?)", (k, v))
+    # 已建库补默认幂等形态，避免老库无该键时读空。
+    conn.execute(
+        "INSERT INTO 窗规(键,值) VALUES ('幂等形态','封印') ON CONFLICT(键) DO NOTHING"
+    )
     if conn.execute("SELECT COUNT(*) AS c FROM 网点源").fetchone()["c"] == 0:
         for row in [
             ("网点-东站", "东站分拨", "华东", "示范网点"),

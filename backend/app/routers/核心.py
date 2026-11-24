@@ -2,7 +2,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from pathlib import Path
-from app.services import 目录, 装载, 关窗, 贯验, 夹具, 统计, 说明
+from app.services import 目录, 装载, 关窗, 贯验, 夹具, 统计, 说明, 幂等
+from app.modules import 窗键幂等
 
 
 async def api_概览(request: Request):
@@ -19,6 +20,9 @@ async def api_窗规_get(request: Request):
 
 async def api_窗规_post(request: Request):
     body = await request.json()
+    if isinstance(body, dict) and "幂等形态" in body:
+        形 = 窗键幂等.规范形态(body["幂等形态"])
+        body = {**body, "幂等形态": 形}
     return JSONResponse(目录.改窗规(body))
 
 
@@ -79,12 +83,50 @@ async def api_统计缓冲(request: Request):
     return JSONResponse(统计.缓冲命运())
 
 
+async def api_幂等_概(request: Request):
+    形 = 窗键幂等.规范形态(目录.窗规().get("幂等形态"))
+    return JSONResponse({
+        **窗键幂等.describe(),
+        "当前形态": 形,
+        "当前形态说明": 窗键幂等.形态文案(形),
+        "下一步": [
+            "灌窗内成片样例（首灌）",
+            "再灌同一批同号（重号）",
+            "看本页对账：现行行数是否不变、归档是否有旧行",
+        ],
+    })
+
+
+async def api_幂等_回执(request: Request):
+    编号 = request.query_params.get("事件编号") or None
+    return JSONResponse({"回执": 幂等.回执列表(编号)})
+
+
+async def api_幂等_归档(request: Request):
+    编号 = request.query_params.get("事件编号") or None
+    return JSONResponse({"归档": 幂等.归档列表(编号)})
+
+
+async def api_幂等_对账(request: Request):
+    编号 = request.query_params.get("事件编号") or None
+    return JSONResponse({"对账": 幂等.对账列表(编号)})
+
+
 async def api_空桩(request: Request):
+    import importlib
+
     root = Path(__file__).resolve().parents[1] / "modules"
     out = []
     if root.is_dir():
         for p in sorted(root.iterdir()):
             if p.is_dir() and p.name != "__pycache__" and (p / "__init__.py").is_file():
+                try:
+                    模 = importlib.import_module(f"app.modules.{p.name}")
+                    已启用 = bool(getattr(模, "describe", lambda: {})().get("默认启用"))
+                except Exception:
+                    已启用 = False
+                if 已启用:
+                    continue
                 out.append(p.name)
     return JSONResponse({"空桩": out, "条数": len(out)})
 
@@ -107,5 +149,9 @@ async def api_空桩(request: Request):
     Route("/api/窗贯验/跑", api_贯验, methods=["POST"]),
     Route("/api/统计/观测命运", api_统计观测),
     Route("/api/统计/缓冲命运", api_统计缓冲),
+    Route("/api/窗键幂等", api_幂等_概),
+    Route("/api/窗键幂等/回执", api_幂等_回执),
+    Route("/api/窗键幂等/归档", api_幂等_归档),
+    Route("/api/窗键幂等/对账", api_幂等_对账),
     Route("/api/空桩", api_空桩),
 ]
